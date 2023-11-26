@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Método Pomodoro</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .pomodoro-container {
+            text-align: center;
+        }
+
+        #timer {
+            font-size: 2em;
+            margin: 20px 0;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        #taskInput {
+            margin-top: 10px;
+            padding: 5px;
+            font-size: 1em;
+        }
+
+        #taskList {
+            list-style: none;
+            padding: 0;
+            margin-top: 10px;
+        }
+
+        .task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .task-item button {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="pomodoro-container">
+        <h1>Método Pomodoro</h1>
+        <div>
+            <label for="pomodoroTimeInput">Duración del Pomodoro (minutos): </label>
+            <input type="number" id="pomodoroTimeInput" placeholder="25" min="1" step="1">
+        </div>
+        <div>
+            <label for="breakTimeInput">Duración del Descanso (minutos): </label>
+            <input type="number" id="breakTimeInput" placeholder="5" min="1" step="1">
+        </div>
+        <div>
+            <label for="taskInput">Agregar tarea: </label>
+            <input type="text" id="taskInput" placeholder="Escribe tu tarea">
+            <button onclick="addTask()">Agregar</button>
+        </div>
+        <div id="timer">25:00</div>
+        <button onclick="startPomodoro()">Iniciar Pomodoro</button>
+        <button onclick="startBreak()">Iniciar Descanso</button>
+        <button onclick="pauseTimer()">Pausar</button>
+
+        <ul id="taskList"></ul>
+    </div>
+
+    <script>
+        let timer;
+        let minutes = 25;
+        let seconds = 0;
+        let isPaused = false;
+        let isBreak = false;
+        const taskList = document.getElementById('taskList');
+
+        function startPomodoro() {
+            resetTimerValues();
+            isBreak = false;
+            startTimer();
+        }
+
+        function startBreak() {
+            resetTimerValues();
+            isBreak = true;
+            startTimer();
+        }
+
+        function pauseTimer() {
+            clearInterval(timer);
+            isPaused = true;
+        }
+
+        function resetTimerValues() {
+            clearInterval(timer);
+            isPaused = false;
+
+            const pomodoroTimeInput = document.getElementById('pomodoroTimeInput');
+            const breakTimeInput = document.getElementById('breakTimeInput');
+
+            minutes = isBreak ? parseInt(breakTimeInput.value) : parseInt(pomodoroTimeInput.value);
+            seconds = 0;
+        }
+
+        function startTimer() {
+            timer = setInterval(updateTimer, 1000);
+        }
+
+        function addTask() {
+            const taskInput = document.getElementById('taskInput');
+            const taskText = taskInput.value.trim();
+
+            if (taskText !== '') {
+                const taskItem = document.createElement('li');
+                taskItem.className = 'task-item';
+                taskItem.innerHTML = `
+                    <span>${taskText}</span>
+                    <button onclick="deleteTask(this)">Eliminar</button>
+                `;
+                taskList.appendChild(taskItem);
+            }
+
+            taskInput.value = ''; // Limpiar el input después de agregar la tarea
+        }
+
+        function deleteTask(button) {
+            const taskItem = button.closest('.task-item');
+            taskList.removeChild(taskItem);
+        }
+
+        function updateTimer() {
+            if (!isPaused) {
+                const timerDisplay = document.getElementById('timer');
+
+                if (minutes === 0 && seconds === 0) {
+                    clearInterval(timer);
+                    alert(isBreak ? '¡Descanso completado! ¡De vuelta al trabajo!' : '¡Pomodoro completado! Tómate un descanso.');
+                    isBreak ? startPomodoro() : startBreak();
+                } else {
+                    if (seconds === 0) {
+                        minutes--;
+                        seconds = 59;
+                    } else {
+                        seconds--;
+                    }
+                }
+
+                timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+    </script>
+</body>
+</html>
