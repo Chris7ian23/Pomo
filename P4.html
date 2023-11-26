@@ -30,7 +30,9 @@
             cursor: pointer;
         }
 
-        #taskInput {
+        #taskInput,
+        #taskTimerInput,
+        #taskDescriptionInput {
             margin-top: 10px;
             padding: 5px;
             font-size: 1em;
@@ -68,6 +70,10 @@
         <div>
             <label for="taskInput">Agregar tarea: </label>
             <input type="text" id="taskInput" placeholder="Escribe tu tarea">
+            <label for="taskTimerInput">Temporizador para la tarea (minutos): </label>
+            <input type="number" id="taskTimerInput" placeholder="25" min="1" step="1">
+            <label for="taskDescriptionInput">Descripción de la tarea: </label>
+            <input type="text" id="taskDescriptionInput" placeholder="Añade una descripción">
             <button onclick="addTask()">Agregar</button>
         </div>
         <div id="timer">25:00</div>
@@ -112,6 +118,7 @@
 
             minutes = isBreak ? parseInt(breakTimeInput.value) : parseInt(pomodoroTimeInput.value);
             seconds = 0;
+            updateTimerDisplay();
         }
 
         function startTimer() {
@@ -120,24 +127,82 @@
 
         function addTask() {
             const taskInput = document.getElementById('taskInput');
+            const taskTimerInput = document.getElementById('taskTimerInput');
+            const taskDescriptionInput = document.getElementById('taskDescriptionInput');
             const taskText = taskInput.value.trim();
+            const taskTimer = taskTimerInput.value;
+            const taskDescription = taskDescriptionInput.value;
 
             if (taskText !== '') {
-                const taskItem = document.createElement('li');
-                taskItem.className = 'task-item';
-                taskItem.innerHTML = `
-                    <span>${taskText}</span>
-                    <button onclick="deleteTask(this)">Eliminar</button>
-                `;
+                const taskId = Date.now();
+                const taskItem = createTaskElement(taskId, taskText, taskTimer, taskDescription);
                 taskList.appendChild(taskItem);
+
+                const tasks = loadTasks();
+                tasks.push({ id: taskId, text: taskText, timer: taskTimer, description: taskDescription });
+                saveTasks(tasks);
             }
 
-            taskInput.value = ''; // Limpiar el input después de agregar la tarea
+            taskInput.value = '';
+            taskTimerInput.value = '';
+            taskDescriptionInput.value = '';
         }
 
-        function deleteTask(button) {
-            const taskItem = button.closest('.task-item');
+        function createTaskElement(taskId, taskText, taskTimer, taskDescription) {
+            const taskItem = document.createElement('li');
+            taskItem.setAttribute('data-task-id', taskId);
+            taskItem.className = 'task-item';
+            taskItem.innerHTML = `
+                <span>${taskText}</span>
+                <span class="temporizador">${taskTimer} min</span>
+                <span class="descripcion">${taskDescription}</span>
+                <button onclick="deleteTask(${taskId})">Eliminar</button>
+                <button onclick="startTaskTimer(${taskId})">Iniciar</button>
+                <button onclick="pauseTaskTimer(${taskId})">Pausar</button>
+            `;
+            return taskItem;
+        }
+
+        function deleteTask(taskId) {
+            const taskItem = document.querySelector(`[data-task-id="${taskId}"]`);
             taskList.removeChild(taskItem);
+
+            const tasks = loadTasks().filter(task => task.id !== taskId);
+            saveTasks(tasks);
+        }
+
+        function startTaskTimer(taskId) {
+            const taskItem = document.querySelector(`[data-task-id="${taskId}"]`);
+            const taskTimerElement = taskItem.querySelector('.temporizador');
+            const [taskMinutes] = taskTimerElement.textContent.split(' ');
+            const taskSeconds = 0;
+
+            let currentMinutes = parseInt(taskMinutes);
+            let currentSeconds = taskSeconds;
+
+            const taskTimer = setInterval(() => {
+                if (!isPaused) {
+                    if (currentMinutes === 0 && currentSeconds === 0) {
+                        clearInterval(taskTimer);
+                        alert('¡Tarea completada!');
+                    } else {
+                        if (currentSeconds === 0) {
+                            currentMinutes--;
+                            currentSeconds = 59;
+                        } else {
+                            currentSeconds--;
+                        }
+                    }
+
+                    taskTimerElement.textContent = `${currentMinutes.toString().padStart(2, '0')}:${currentSeconds.toString().padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function pauseTaskTimer(taskId) {
+            const taskItem = document.querySelector(`[data-task-id="${taskId}"]`);
+            const taskTimerElement = taskItem.querySelector('.temporizador');
+            taskTimerElement.textContent = 'Pausado';
         }
 
         function updateTimer() {
@@ -160,6 +225,28 @@
                 timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             }
         }
+
+        function updateTimerDisplay() {
+            const timerDisplay = document.getElementById('timer');
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function loadTasks() {
+            const tasksString = localStorage.getItem('tasks');
+            return tasksString ? JSON.parse(tasksString) : [];
+        }
+
+        function saveTasks(tasks) {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        window.addEventListener('load', () => {
+            const tasks = loadTasks();
+            tasks.forEach(task => {
+                const taskItem = createTaskElement(task.id, task.text, task.timer, task.description);
+                taskList.appendChild(taskItem);
+            });
+        });
     </script>
-</body>
+    </body>
 </html>
